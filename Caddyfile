@@ -44,7 +44,7 @@ ${MATRIX_DOMAIN} {
 		header Access-Control-Allow-Origin "*"
 		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
 	}
-	handle /_matrix/client/unstable/org.matrix.msc4143/rtc/transports {
+	handle /_matrix/client/unstable/org.matrix.msc4143/rtc_transports {
 		header Content-Type "application/json"
 		header Access-Control-Allow-Origin "*"
 		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
