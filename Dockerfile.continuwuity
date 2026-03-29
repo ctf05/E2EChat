@@ -1,0 +1,2 @@
+FROM ghcr.io/continuwuity/continuwuity:latest
+COPY --from=busybox:musl /bin/wget /usr/local/bin/wget

@@ -69,10 +69,7 @@ cd E2EChat
 # 6. Start the stack
 docker compose up -d
 
-# 7. Create your first admin user
-./scripts/create-user.sh --admin yourusername
-
-# 8. Log in at https://app.yourdomain.com
+# 7. Create your admin account (see First User Setup below)
 ```
 
 ### Other VPS
@@ -93,10 +90,7 @@ cd E2EChat
 # 6. Start the stack
 docker compose up -d
 
-# 7. Create your first admin user
-./scripts/create-user.sh --admin yourusername
-
-# 8. Log in at https://app.yourdomain.com
+# 7. Create your admin account (see First User Setup below)
 ```
 
 ## DNS Setup
@@ -155,23 +149,37 @@ You also need ingress rules in the **VCN Security List** (OCI Console: **Network
 | 0.0.0.0/0 | TCP | 80, 443, 8448, 7881 | HTTP, HTTPS, federation, WebRTC TCP |
 | 0.0.0.0/0 | UDP | 443, 3478, 50100-50400 | HTTP/3, TURN, WebRTC media |
 
+## First User Setup
+
+Continuwuity generates a **one-time bootstrap token** on first startup. This token creates the server's admin account.
+
+1. Get the bootstrap token from the logs:
+   ```bash
+   docker compose logs continuwuity | grep "registration token"
+   ```
+   Look for: `register an account on chat.example.com using the registration token XXXXXXXX`
+
+2. Open `https://app.yourdomain.com` in your browser
+
+3. Click **"Create account"**
+
+4. Pick your username and password
+
+5. Enter the **bootstrap token** when prompted for a registration token
+
+This first account is automatically the server admin. After it's created, your `.env` registration token activates for all future users.
+
 ## User Management
 
-### Create a regular user
+### Invite others
+
+Share your **registration token** (from `.env`, shown during setup) and your homeserver address (`chat.yourdomain.com`). They can register in Element or any Matrix client.
+
+### Create users via script
 
 ```bash
 ./scripts/create-user.sh alice
 ```
-
-### Create an admin user
-
-```bash
-./scripts/create-user.sh --admin alice
-```
-
-### Share registration
-
-Give users your registration token (shown during setup, stored in `.env`) and your homeserver address. They can register in Element or any Matrix client.
 
 ## Client Setup
 
@@ -201,10 +209,11 @@ Any Matrix client works (FluffyChat, SchildiChat, Cinny, etc.). Set the homeserv
 
 ```bash
 docker compose pull
+docker compose build --pull
 docker compose up -d
 ```
 
-This pulls the latest images and recreates containers. Data is preserved in Docker volumes.
+This pulls the latest images, rebuilds the healthcheck layer, and recreates containers. Data is preserved in Docker volumes.
 
 ## Backups
 
@@ -297,6 +306,7 @@ To increase capacity, expand the port ranges in `livekit.yaml` and your firewall
 | `livekit.yaml` | LiveKit SFU config template |
 | `Caddyfile` | Reverse proxy config template |
 | `element-web-config.json` | Element Web config template |
+| `Dockerfile.continuwuity` | Adds wget to scratch image for healthcheck |
 | `.env.example` | Environment variable template |
 | `scripts/setup.sh` | First-time setup + secret generation |
 | `scripts/create-user.sh` | Create Matrix user accounts |

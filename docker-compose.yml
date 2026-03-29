@@ -30,7 +30,10 @@ services:
   # Handles: user accounts, rooms, messages, E2EE, federation, sliding sync.
   # ---------------------------------------------------------------------------
   continuwuity:
-    image: ghcr.io/continuwuity/continuwuity:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.continuwuity
+    image: e2echat/continuwuity:latest
     container_name: continuwuity
     restart: unless-stopped
     volumes:
@@ -45,7 +48,7 @@ services:
     networks:
       - matrix-net
     healthcheck:
-      test: ["CMD-SHELL", "cat < /dev/tcp/localhost/6167 || exit 1"]
+      test: ["CMD", "/usr/local/bin/wget", "-q", "--spider", "http://localhost:6167/_matrix/client/versions"]
       interval: 30s
       timeout: 5s
       retries: 3
