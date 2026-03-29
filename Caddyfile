@@ -35,6 +35,15 @@ ${MATRIX_DOMAIN} {
 		respond `{"m.homeserver":{"base_url":"https://${MATRIX_DOMAIN}"},"org.matrix.msc3575.proxy":{"url":"https://${MATRIX_DOMAIN}"},"org.matrix.msc4143.rtc_foci":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
 	}
 
+	# --- MatrixRTC Transports (MSC4143) --------------------------------------
+	# Continuwuity 0.5.x doesn't implement this endpoint yet.
+	# Caddy serves it so Element Call can discover the LiveKit backend.
+	handle /_matrix/client/v1/rtc/transports {
+		header Content-Type "application/json"
+		header Access-Control-Allow-Origin "*"
+		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
+	}
+
 	# --- Matrix Client-Server API --------------------------------------------
 	handle /_matrix/* {
 		reverse_proxy continuwuity:6167
