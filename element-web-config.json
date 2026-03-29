@@ -1,0 +1,16 @@
+{
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "https://${MATRIX_DOMAIN}",
+            "server_name": "${MATRIX_DOMAIN}"
+        }
+    },
+    "brand": "E2EChat",
+    "disable_guests": true,
+    "disable_3pid_login": true,
+    "show_labs_settings": false,
+    "default_theme": "dark",
+    "room_directory": {
+        "servers": ["${MATRIX_DOMAIN}"]
+    }
+}

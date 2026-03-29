@@ -1,0 +1,74 @@
+# =============================================================================
+# Continuwuity (Matrix Homeserver) Configuration
+# =============================================================================
+# This is a TEMPLATE file with ${VAR} placeholders.
+# Run ./scripts/setup.sh to generate the final config at data/continuwuity.toml
+# with your domain and secret values substituted.
+#
+# Documentation: https://continuwuity.org/configuration
+# Config reference: https://continuwuity.org/reference/config
+# =============================================================================
+
+[global]
+
+# The Matrix server name — the domain part of Matrix IDs (@user:server_name).
+# CANNOT be changed after initial setup without wiping the database.
+server_name = "${MATRIX_DOMAIN}"
+
+# Database storage path (RocksDB, inside the container)
+database_path = "/var/lib/continuwuity"
+
+# Listen on all interfaces inside the container
+address = ["0.0.0.0"]
+port = 6167
+
+# Maximum upload size in bytes
+max_request_size = ${MAX_UPLOAD_SIZE}
+
+# --- Registration ------------------------------------------------------------
+# Token-based registration: users need the token to create an account.
+# Create users via ./scripts/create-user.sh or share the token.
+allow_registration = true
+registration_token = "${REGISTRATION_TOKEN}"
+
+# --- Federation --------------------------------------------------------------
+# Required even for private servers — lk-jwt-service uses the federation
+# OpenID endpoint (/_matrix/federation/v1/openid/userinfo) for auth.
+allow_federation = true
+
+# Trusted servers for cryptographic key verification
+trusted_servers = ["matrix.org"]
+
+# --- Encryption --------------------------------------------------------------
+allow_encryption = true
+
+# --- Rooms -------------------------------------------------------------------
+allow_room_creation = true
+default_room_version = "11"
+
+# --- Networking --------------------------------------------------------------
+# IPv4 only — avoids DNS resolution hangs in Docker environments
+ip_lookup_strategy = 1
+
+# --- Display -----------------------------------------------------------------
+# Remove the default emoji suffix from new user display names
+new_user_displayname_suffix = ""
+
+# --- Logging -----------------------------------------------------------------
+log = "${LOG_LEVEL}"
+
+# --- Well-Known Delegation ---------------------------------------------------
+# Tells Matrix clients and federated servers where to find this homeserver.
+# Since server_name matches where the server runs, this is self-referential.
+[global.well_known]
+client = "https://${MATRIX_DOMAIN}"
+server = "${MATRIX_DOMAIN}:443"
+
+# --- Matrix RTC (Element Call / LiveKit) -------------------------------------
+# Advertises the LiveKit focus via /_matrix/client/v1/rtc/transports (MSC4143).
+# Current Element clients also need org.matrix.msc4143.rtc_foci in the
+# .well-known/matrix/client response — Caddy handles that separately.
+[global.matrix_rtc]
+foci = [
+    { type = "livekit", livekit_service_url = "https://${LIVEKIT_DOMAIN}" },
+]

@@ -1,0 +1,61 @@
+# =============================================================================
+# LiveKit SFU Configuration
+# =============================================================================
+# This is a TEMPLATE file with ${VAR} placeholders.
+# Run ./scripts/setup.sh to generate the final config at data/livekit.yaml
+#
+# Documentation: https://docs.livekit.io/home/self-hosting/deployment/
+# Ports reference: https://docs.livekit.io/home/self-hosting/ports-firewall/
+# =============================================================================
+
+# WebSocket signaling port (proxied by Caddy for TLS termination)
+port: 7880
+
+# Bind to all interfaces (required for host network mode)
+bind_addresses:
+  - ""
+
+# Logging
+log_level: info
+
+# --- WebRTC Media -----------------------------------------------------------
+rtc:
+  # TCP fallback for clients where UDP is blocked
+  tcp_port: 7881
+
+  # UDP port range for media streams (2 ports per participant)
+  # 100 ports = ~50 concurrent call participants
+  port_range_start: 50100
+  port_range_end: 50200
+
+  # Use the server's external/public IP for ICE candidates.
+  # Required for cloud VMs behind NAT (Oracle Cloud, AWS, GCP, etc.)
+  use_external_ip: true
+
+  # No loopback candidates in production
+  enable_loopback_candidate: false
+
+# --- API Authentication -----------------------------------------------------
+# Shared key/secret pair — must match lk-jwt-service configuration.
+# The key is an identifier; the secret signs JWT tokens.
+keys:
+  ${LIVEKIT_API_KEY}: "${LIVEKIT_API_SECRET}"
+
+# --- Built-in TURN Server ---------------------------------------------------
+# Helps clients behind restrictive firewalls/NATs connect.
+# Relays media through the server when direct UDP fails.
+turn:
+  enabled: true
+  # Standard TURN UDP port
+  udp_port: 3478
+  # TURN relay port range (must NOT overlap with rtc port range)
+  # 100 ports = ~50 TURN-relayed participants
+  relay_range_start: 50300
+  relay_range_end: 50400
+  # Domain for TURN TLS (must match Caddy's TLS certificate)
+  domain: "${LIVEKIT_DOMAIN}"
+
+# --- Room Defaults -----------------------------------------------------------
+room:
+  # Destroy empty rooms after 5 minutes
+  empty_timeout: 300

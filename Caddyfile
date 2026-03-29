@@ -1,0 +1,91 @@
+# =============================================================================
+# Caddy Reverse Proxy Configuration
+# =============================================================================
+# This is a TEMPLATE file with ${VAR} placeholders.
+# Run ./scripts/setup.sh to generate the final config at data/Caddyfile
+#
+# Caddy automatically obtains and renews TLS certificates via Let's Encrypt.
+# =============================================================================
+
+# --- Global Options ----------------------------------------------------------
+{
+	email ${ACME_EMAIL}
+}
+
+# =============================================================================
+# Matrix Homeserver (chat.ctf-compendium.uk)
+# =============================================================================
+# Handles: client API, well-known discovery, sliding sync
+# =============================================================================
+${MATRIX_DOMAIN} {
+	# --- Well-Known Discovery ------------------------------------------------
+	# Caddy serves these explicitly (not proxied to Continuwuity) because
+	# current Element X / Element Call reads org.matrix.msc4143.rtc_foci
+	# from .well-known/matrix/client, not the newer transports endpoint.
+
+	handle /.well-known/matrix/server {
+		header Content-Type "application/json"
+		header Access-Control-Allow-Origin "*"
+		respond `{"m.server":"${MATRIX_DOMAIN}:443"}`
+	}
+
+	handle /.well-known/matrix/client {
+		header Content-Type "application/json"
+		header Access-Control-Allow-Origin "*"
+		respond `{"m.homeserver":{"base_url":"https://${MATRIX_DOMAIN}"},"org.matrix.msc3575.proxy":{"url":"https://${MATRIX_DOMAIN}"},"org.matrix.msc4143.rtc_foci":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
+	}
+
+	# --- Matrix Client-Server API --------------------------------------------
+	handle /_matrix/* {
+		reverse_proxy continuwuity:6167
+	}
+
+	# --- Synapse-compatible admin/sliding sync paths -------------------------
+	handle /_synapse/* {
+		reverse_proxy continuwuity:6167
+	}
+
+	# Default: 404 for anything else on this domain
+	handle {
+		respond "Not Found" 404
+	}
+}
+
+# =============================================================================
+# Matrix Federation (port 8448)
+# =============================================================================
+# Some federated servers connect on port 8448 instead of using .well-known.
+# Caddy serves TLS on this port with the same certificate.
+# =============================================================================
+${MATRIX_DOMAIN}:8448 {
+	reverse_proxy continuwuity:6167
+}
+
+# =============================================================================
+# LiveKit + JWT Auth (call.ctf-compendium.uk)
+# =============================================================================
+# Routes auth endpoints to lk-jwt-service, everything else to LiveKit SFU.
+# =============================================================================
+${LIVEKIT_DOMAIN} {
+	# --- JWT Authentication Endpoints ----------------------------------------
+	# Element Call hits these to get a LiveKit JWT token
+	@jwt_service {
+		path /sfu/get*
+		path /healthz*
+		path /get_token*
+	}
+	reverse_proxy @jwt_service host.docker.internal:8080
+
+	# --- LiveKit SFU WebSocket -----------------------------------------------
+	# All other traffic (WebSocket signaling) goes to LiveKit
+	reverse_proxy host.docker.internal:7880
+}
+
+# =============================================================================
+# Element Web (app.ctf-compendium.uk)
+# =============================================================================
+# Browser-based Matrix client — no app install needed.
+# =============================================================================
+${ELEMENT_DOMAIN} {
+	reverse_proxy element-web:80
+}

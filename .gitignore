@@ -1,0 +1,17 @@
+# Environment secrets (contains API keys, registration tokens)
+.env
+
+# Generated config files (produced by setup.sh from templates)
+data/
+
+# Backup archives
+backups/
+
+# Editor and OS artifacts
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

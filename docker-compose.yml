@@ -1,0 +1,171 @@
+# =============================================================================
+# E2EChat: Self-Hosted Matrix Communication Stack
+# =============================================================================
+#
+# Services:
+#   1. continuwuity  — Matrix homeserver (Rust, lightweight)
+#   2. livekit       — Voice/video SFU (WebRTC media server)
+#   3. lk-jwt-service — Element Call auth (OpenID → LiveKit JWT bridge)
+#   4. caddy         — Reverse proxy with automatic TLS
+#   5. element-web   — Browser-based Matrix client
+#
+# Prerequisites:
+#   1. Run ./scripts/setup.sh to generate secrets and config files
+#   2. Point DNS A records to this server for all three subdomains
+#   3. Open firewall ports (see README.md)
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose logs -f        # View logs
+#   docker compose down           # Stop all services
+#   docker compose pull && docker compose up -d   # Update images
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Continuwuity — Matrix Homeserver
+  # ---------------------------------------------------------------------------
+  # Lightweight Rust-based homeserver with built-in RocksDB database.
+  # Handles: user accounts, rooms, messages, E2EE, federation, sliding sync.
+  # ---------------------------------------------------------------------------
+  continuwuity:
+    image: ghcr.io/continuwuity/continuwuity:latest
+    container_name: continuwuity
+    restart: unless-stopped
+    volumes:
+      - ./data/continuwuity.toml:/etc/continuwuity.toml:ro
+      - continuwuity_data:/var/lib/continuwuity
+    environment:
+      CONTINUWUITY_CONFIG: "/etc/continuwuity.toml"
+    ulimits:
+      nofile:
+        soft: 1048567
+        hard: 1048567
+    networks:
+      - matrix-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:6167/_matrix/client/versions"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # LiveKit — Voice/Video SFU (Selective Forwarding Unit)
+  # ---------------------------------------------------------------------------
+  # Routes WebRTC media streams for Element Call.
+  # Uses host network for optimal UDP performance and NAT traversal.
+  #
+  # Ports bound directly on host:
+  #   7880     — WebSocket signaling (block externally; Caddy proxies this)
+  #   7881/tcp — WebRTC TCP fallback
+  #   3478/udp — Built-in TURN server
+  #   50100-50200/udp — WebRTC media
+  #   50300-50400/udp — TURN relay
+  # ---------------------------------------------------------------------------
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./data/livekit.yaml:/etc/livekit.yaml:ro
+    network_mode: host
+
+  # ---------------------------------------------------------------------------
+  # lk-jwt-service — Element Call Authentication Bridge
+  # ---------------------------------------------------------------------------
+  # Verifies Matrix OpenID tokens and issues LiveKit JWTs.
+  #
+  # Auth flow:
+  #   Element Call → gets OpenID token from homeserver
+  #   → sends to lk-jwt-service (/sfu/get)
+  #   → service verifies token against homeserver federation API
+  #   → returns LiveKit JWT + WebSocket URL
+  #   → client connects directly to LiveKit
+  #
+  # Uses host network to avoid Docker loopback issues when reaching
+  # LiveKit (localhost:7880) and the homeserver (via public domain).
+  # ---------------------------------------------------------------------------
+  lk-jwt-service:
+    image: ghcr.io/element-hq/lk-jwt-service:latest
+    container_name: lk-jwt-service
+    restart: unless-stopped
+    environment:
+      # Public WebSocket URL returned to clients (must be reachable from browser)
+      LIVEKIT_URL: "wss://${LIVEKIT_DOMAIN}"
+      # Must match the key/secret in livekit.yaml
+      LIVEKIT_KEY: "${LIVEKIT_API_KEY}"
+      LIVEKIT_SECRET: "${LIVEKIT_API_SECRET}"
+      # Bind on default port 8080 (host network)
+      LIVEKIT_JWT_BIND: ":8080"
+      # Only accept tokens from our homeserver
+      LIVEKIT_FULL_ACCESS_HOMESERVERS: "${MATRIX_DOMAIN}"
+    network_mode: host
+    depends_on:
+      continuwuity:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Caddy — Reverse Proxy with Automatic TLS
+  # ---------------------------------------------------------------------------
+  # Terminates TLS, obtains Let's Encrypt certificates automatically,
+  # and routes traffic to the correct backend service.
+  #
+  # Serves .well-known/matrix/client with RTC foci for Element Call discovery.
+  # ---------------------------------------------------------------------------
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"        # HTTP (Let's Encrypt ACME challenge + HTTPS redirect)
+      - "443:443"      # HTTPS
+      - "443:443/udp"  # HTTP/3 (QUIC)
+      - "8448:8448"    # Matrix federation
+    volumes:
+      - ./data/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # TLS certificates — CRITICAL to persist
+      - caddy_config:/config   # Caddy runtime config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - matrix-net
+    depends_on:
+      - continuwuity
+      - element-web
+
+  # ---------------------------------------------------------------------------
+  # Element Web — Browser-Based Matrix Client
+  # ---------------------------------------------------------------------------
+  # Serves the Element Web SPA so users can access chat from any browser
+  # without installing an app. Pre-configured to point at this homeserver.
+  # ---------------------------------------------------------------------------
+  element-web:
+    image: vectorim/element-web:latest
+    container_name: element-web
+    restart: unless-stopped
+    volumes:
+      - ./data/element-web-config.json:/app/config.json:ro
+    networks:
+      - matrix-net
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  continuwuity_data:
+    name: e2echat_continuwuity_data
+  caddy_data:
+    name: e2echat_caddy_data
+  caddy_config:
+    name: e2echat_caddy_config
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  matrix-net:
+    name: e2echat_matrix-net
+    driver: bridge
