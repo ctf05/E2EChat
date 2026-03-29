@@ -42,12 +42,12 @@ ${MATRIX_DOMAIN} {
 	handle /_matrix/client/v1/rtc/transports {
 		header Content-Type "application/json"
 		header Access-Control-Allow-Origin "*"
-		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
+		respond `[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]`
 	}
 	handle /_matrix/client/unstable/org.matrix.msc4143/rtc_transports {
 		header Content-Type "application/json"
 		header Access-Control-Allow-Origin "*"
-		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
+		respond `[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]`
 	}
 
 	# --- Matrix Client-Server API --------------------------------------------
