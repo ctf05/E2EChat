@@ -35,6 +35,11 @@ rtc:
   # No loopback candidates in production
   enable_loopback_candidate: false
 
+  # Public STUN servers for NAT traversal
+  stun_servers:
+    - stun:stun.l.google.com:19302
+    - stun:stun1.l.google.com:19302
+
 # --- API Authentication -----------------------------------------------------
 # Shared key/secret pair — must match lk-jwt-service configuration.
 # The key is an identifier; the secret signs JWT tokens.
@@ -45,13 +50,7 @@ keys:
 # Helps clients behind restrictive firewalls/NATs connect.
 # Relays media through the server when direct UDP fails.
 turn:
-  enabled: true
-  # Standard TURN UDP port (plain UDP, no TLS — Caddy handles TLS separately)
-  udp_port: 3478
-  # TURN relay port range (must NOT overlap with rtc port range)
-  # 100 ports = ~50 TURN-relayed participants
-  relay_range_start: 50300
-  relay_range_end: 50400
+  enabled: false
 
 # --- Room Defaults -----------------------------------------------------------
 room:

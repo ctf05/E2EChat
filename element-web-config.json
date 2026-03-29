@@ -18,7 +18,6 @@
         "feature_group_calls": true
     },
     "element_call": {
-        "url": "https://call.element.io",
         "use_exclusively": true
     }
 }
