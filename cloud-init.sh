@@ -14,18 +14,30 @@
 set -euo pipefail
 
 # --- Firewall Rules ----------------------------------------------------------
+# Oracle Cloud Ubuntu has a default REJECT-all rule that blocks everything.
+# We must delete it first, add our rules, then append it at the end.
+
+# Find and delete the REJECT-all rule (typically at position 5)
+REJECT_LINE=$(iptables -L INPUT -n --line-numbers | grep "REJECT.*icmp-host-prohibited" | awk '{print $1}' | head -1)
+if [ -n "$REJECT_LINE" ]; then
+    iptables -D INPUT "$REJECT_LINE"
+fi
+
 # Open required ports for E2EChat
-iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-iptables -I INPUT 6 -m state --state NEW -p udp --dport 443 -j ACCEPT
-iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8448 -j ACCEPT
-iptables -I INPUT 6 -m state --state NEW -p tcp --dport 7881 -j ACCEPT
-iptables -I INPUT 6 -m state --state NEW -p udp --dport 3478 -j ACCEPT
-iptables -I INPUT 6 -m state --state NEW -p udp --dport 50100:50400 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p udp --dport 443 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p tcp --dport 8448 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p tcp --dport 7881 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p udp --dport 3478 -j ACCEPT
+iptables -A INPUT -m state --state NEW -p udp --dport 50100:50400 -j ACCEPT
 
 # Block internal-only ports from external access (Caddy proxies to these)
-iptables -I INPUT 6 -m state --state NEW -p tcp --dport 7880 -j DROP
-iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8080 -j DROP
+iptables -A INPUT -m state --state NEW -p tcp --dport 7880 -j DROP
+iptables -A INPUT -m state --state NEW -p tcp --dport 8080 -j DROP
+
+# Re-add the REJECT-all rule at the end (catch-all)
+iptables -A INPUT -j REJECT --reject-with icmp-host-prohibited
 
 netfilter-persistent save
 

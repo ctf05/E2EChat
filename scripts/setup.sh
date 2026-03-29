@@ -262,22 +262,14 @@ EOF
     if [ -f /etc/oracle-cloud-agent/agent.yml ] || \
        dmidecode -s system-product-name 2>/dev/null | grep -qi "oracle" || \
        curl -s --connect-timeout 2 http://169.254.169.254/opc/v1/instance/ &>/dev/null; then
-        echo "Oracle Cloud detected! You need BOTH VCN Security List rules AND iptables:"
+        echo "Oracle Cloud detected! Run cloud-init.sh to set up firewall rules:"
         echo ""
-        echo "  # Allow required ports through iptables"
-        echo "  sudo iptables -I INPUT 6 -m state --state NEW -p tcp --match multiport --dports 80,443,8448,7881 -j ACCEPT"
-        echo "  sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 443 -j ACCEPT"
-        echo "  sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 3478 -j ACCEPT"
-        echo "  sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 50100:50400 -j ACCEPT"
+        echo "  sudo bash cloud-init.sh"
         echo ""
-        echo "  # Block direct access to internal ports"
-        echo "  sudo iptables -I INPUT 6 -m state --state NEW -p tcp --match multiport --dports 7880,8080 -j DROP"
-        echo ""
-        echo "  # Save rules"
-        echo "  sudo netfilter-persistent save"
-        echo ""
-        echo "  Also add these same port rules in the OCI Console:"
+        echo "  Also add ingress rules in the OCI Console:"
         echo "  Networking > Virtual Cloud Networks > [your VCN] > Security Lists"
+        echo "  TCP: 80, 443, 8448, 7881"
+        echo "  UDP: 443, 3478, 50100-50400"
         echo ""
     else
         echo "If using UFW:"
