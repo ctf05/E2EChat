@@ -38,7 +38,13 @@ ${MATRIX_DOMAIN} {
 	# --- MatrixRTC Transports (MSC4143) --------------------------------------
 	# Continuwuity 0.5.x doesn't implement this endpoint yet.
 	# Caddy serves it so Element Call can discover the LiveKit backend.
+	# Both stable and unstable paths are needed for client compatibility.
 	handle /_matrix/client/v1/rtc/transports {
+		header Content-Type "application/json"
+		header Access-Control-Allow-Origin "*"
+		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
+	}
+	handle /_matrix/client/unstable/org.matrix.msc4143/rtc/transports {
 		header Content-Type "application/json"
 		header Access-Control-Allow-Origin "*"
 		respond `{"transports":[{"type":"livekit","livekit_service_url":"https://${LIVEKIT_DOMAIN}"}]}`
