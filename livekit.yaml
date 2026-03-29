@@ -46,14 +46,12 @@ keys:
 # Relays media through the server when direct UDP fails.
 turn:
   enabled: true
-  # Standard TURN UDP port
+  # Standard TURN UDP port (plain UDP, no TLS — Caddy handles TLS separately)
   udp_port: 3478
   # TURN relay port range (must NOT overlap with rtc port range)
   # 100 ports = ~50 TURN-relayed participants
   relay_range_start: 50300
   relay_range_end: 50400
-  # Domain for TURN TLS (must match Caddy's TLS certificate)
-  domain: "${LIVEKIT_DOMAIN}"
 
 # --- Room Defaults -----------------------------------------------------------
 room:
