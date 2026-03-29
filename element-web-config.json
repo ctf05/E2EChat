@@ -13,5 +13,9 @@
     "default_theme": "dark",
     "room_directory": {
         "servers": ["${MATRIX_DOMAIN}"]
+    },
+    "element_call": {
+        "url": "https://call.element.io",
+        "use_exclusively": true
     }
 }
