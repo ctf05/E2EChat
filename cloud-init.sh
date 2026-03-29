@@ -32,9 +32,10 @@ iptables -A INPUT -m state --state NEW -p tcp --dport 7881 -j ACCEPT
 iptables -A INPUT -m state --state NEW -p udp --dport 3478 -j ACCEPT
 iptables -A INPUT -m state --state NEW -p udp --dport 50100:50400 -j ACCEPT
 
-# Block internal-only ports from external access (Caddy proxies to these)
-iptables -A INPUT -m state --state NEW -p tcp --dport 7880 -j DROP
-iptables -A INPUT -m state --state NEW -p tcp --dport 8080 -j DROP
+# Block internal-only ports from external access, but allow Docker bridge traffic
+# (Caddy on 172.17.0.x needs to reach these ports internally)
+iptables -A INPUT -m state --state NEW -p tcp --dport 7880 ! -s 172.16.0.0/12 -j DROP
+iptables -A INPUT -m state --state NEW -p tcp --dport 8080 ! -s 172.16.0.0/12 -j DROP
 
 # Re-add the REJECT-all rule at the end (catch-all)
 iptables -A INPUT -j REJECT --reject-with icmp-host-prohibited
