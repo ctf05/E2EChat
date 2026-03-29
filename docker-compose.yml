@@ -45,7 +45,7 @@ services:
     networks:
       - matrix-net
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:6167/_matrix/client/versions"]
+      test: ["CMD-SHELL", "cat < /dev/tcp/localhost/6167 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
